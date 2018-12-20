@@ -601,11 +601,8 @@ void PlayGame(struct Room roomArray[], int startIdx, int endIdx, int userIdx)
 			free(buffer);
 			buffer = NULL;			
 		}while((InputValidation(roomArray, userIdx, userInput) == 0) && (strcmp(userInput, "time") != 0)); //== 0 means input was not valid or that user entered "time"
+		
 		//now that have obtained valid user input, need to set current room to new room location
-		//roomsVisited[numSteps] = roomArray[userIdx].roomName;	
-		//printf("roomsVisited%s\n", roomsVisited[numSteps]);
-		//printf("roomArray%s\n", roomArray[userIdx].roomName);
-
 		if(strcmp(userInput, "time") != 0)
 		{
 			SetNewLocation(roomArray, userIdx, userInput);

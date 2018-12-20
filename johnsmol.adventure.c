@@ -579,7 +579,7 @@ void PlayGame(struct Room roomArray[], int startIdx, int endIdx, int userIdx)
 				//will only hold the final (and thus valid) input.
 				//check with input validation again so that case where just enter is hit
 				//and causes errors with strcpy is prevented
-				if(InputValidation(roomArray, userIdx, bufferNoNewLine) == 1)
+				if((InputValidation(roomArray, userIdx, bufferNoNewLine) == 1) || (strcmp(bufferNoNewLine, "time") == 0))
 				{
 					strcpy(userInput, bufferNoNewLine);
 				}			
@@ -600,19 +600,22 @@ void PlayGame(struct Room roomArray[], int startIdx, int endIdx, int userIdx)
 
 			free(buffer);
 			buffer = NULL;			
-		}while(InputValidation(roomArray, userIdx, userInput) == 0); //== 0 means input was not valid
+		}while((InputValidation(roomArray, userIdx, userInput) == 0) && (strcmp(userInput, "time") != 0)); //== 0 means input was not valid or that user entered "time"
 		//now that have obtained valid user input, need to set current room to new room location
-		SetNewLocation(roomArray, userIdx, userInput);
 		//roomsVisited[numSteps] = roomArray[userIdx].roomName;	
 		//printf("roomsVisited%s\n", roomsVisited[numSteps]);
 		//printf("roomArray%s\n", roomArray[userIdx].roomName);
 
-		//increment steps since have moved to a new room successfully
-		//(as noted in the assignment instructions, the number of STEPS taken is being
-		//counted, NOT the number of rooms visited
-		numSteps++;
-		roomsVisited[numSteps - 1] = malloc(32 * sizeof(char));
-		strcpy(roomsVisited[numSteps - 1], roomArray[userIdx].roomName);
+		if(strcmp(userInput, "time") != 0)
+		{
+			SetNewLocation(roomArray, userIdx, userInput);
+			//increment steps since have moved to a new room successfully
+			//(as noted in the assignment instructions, the number of STEPS taken is being
+			//counted, NOT the number of rooms visited
+			numSteps++;
+			roomsVisited[numSteps - 1] = malloc(32 * sizeof(char));
+			strcpy(roomsVisited[numSteps - 1], roomArray[userIdx].roomName);
+		}
 	}
 
 	if(numSteps >= maxSteps) //if game ended because user took too many steps looking for end room

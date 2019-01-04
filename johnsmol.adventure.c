@@ -613,6 +613,10 @@ void PlayGame(struct Room roomArray[], int startIdx, int endIdx, int userIdx)
 			roomsVisited[numSteps - 1] = malloc(32 * sizeof(char));
 			strcpy(roomsVisited[numSteps - 1], roomArray[userIdx].roomName);
 		}
+		else
+		{
+
+		}
 	}
 
 	if(numSteps >= maxSteps) //if game ended because user took too many steps looking for end room

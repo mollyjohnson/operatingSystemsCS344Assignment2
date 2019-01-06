@@ -60,6 +60,70 @@ void CurRoomPrint(struct Room roomArray[], int userIndex);
 int InputValidation(struct Room roomArray[], int userIndex, char *userStringInput);
 void SetNewLocation(struct Room roomArray[], int  userIndex, char *userStringInput);
 void TimeKeep();
+char *ReplaceString(char *str, char *orig, char *rep);
+
+/*
+NAME
+replacestring
+SYNOPSIS
+replaces a string with a new string
+DESCRIPTION
+replaces specified substring of a string with a new substring.
+Adapted from my own work 11/14/18 and:
+https://stackoverflow.com/questions/32413667/replace-all-occurrences-of-a-substring-in-a-string-in-c and
+https://www.geeksforgeeks.org/c-program-replace-word-text-another-given-word/
+*/
+char *ReplaceString(char *str, char *orig, char *rep)
+{
+	char *result;
+	int i = 0;
+	int cnt = 0;
+
+	//save lengths of the replacement substring and the original substring
+	int newWlen = strlen(rep);
+	int oldWlen = strlen(orig);
+
+	//go through each char in the original long string, to check for occurrences of the original substring
+	for(i = 0; str[i] != '\0'; i++)
+	{
+		if(strstr(&str[i], orig) == &str[i])
+		{
+			cnt++;
+			i += oldWlen - 1;
+		}
+	}
+
+	result = (char *)malloc(i + cnt *(newWlen - oldWlen) + 1);
+	i = 0;
+
+	//replace each occurrence of the orig substring with the new substring
+	while (*str)
+	{
+		if(strstr(str, orig) == str)
+		{
+			strcpy(&result[i], rep);
+			i += newWlen;
+			str += oldWlen;
+		}
+		else
+		{
+			result[i++] = *str++;
+		}
+	}
+
+	//set result to a new string to be returned so result memory can be freed
+	result[i] = '\0';
+	static char returnStr[256];
+	memset(returnStr, '\0', sizeof(returnStr));
+	strcpy(returnStr, result);
+
+	//free memory
+	free(result);
+	result = NULL;
+
+	//return newly expanded string
+	return returnStr;
+}
 
 /*
 NAME
@@ -78,6 +142,8 @@ void TimeKeep()
 	struct tm *info;
 	char buffer[256];
 	memset(buffer, '\0', sizeof(buffer));
+	char formattedBuffer[256];
+	memset(formattedBuffer, '\0', sizeof(formattedBuffer));
 
 	time(&rawtime);
 	info = localtime(&rawtime);
@@ -98,9 +164,25 @@ void TimeKeep()
 	}
 
 	//replace upper case AM or PM with lower case am or pm (as that's the format in given example)
-
+	//check if is AM with strstr (if no "AM" in string, strstr will return null)
+	if(strstr(buffer, "AM") != NULL)
+	{
+		char *tempAM = ReplaceString(buffer, "AM", "am");
+		strcpy(formattedBuffer, tempAM);
+	}
+	//check if is PM with strstr (if no "PM" in string, strstr will return null)
+	else if(strstr(buffer, "PM") != NULL)
+	{
+		char *tempPM = ReplaceString(buffer, "PM", "pm");
+		strcpy(formattedBuffer, tempPM);
+	}
+	else
+	{
+		perror("time not given in am or pm, error!");
+		exit(1);
+	}
 		
-	printf(" %s\n\n", buffer);
+	printf(" %s\n\n", formattedBuffer);
 }
 
 /*

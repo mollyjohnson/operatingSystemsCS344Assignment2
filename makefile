@@ -11,4 +11,5 @@ clean:
 
 cleanall:
 	rm -r johnsmol.rooms*
-	rm johnsmol.buildrooms johnsmol.adventure
+	rm -f *.txt
+	rm -f johnsmol.buildrooms johnsmol.adventure

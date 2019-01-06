@@ -59,6 +59,20 @@ void PlayGame(struct Room roomArray[], int startIdx, int endIdx, int userIdx);
 void CurRoomPrint(struct Room roomArray[], int userIndex);
 int InputValidation(struct Room roomArray[], int userIndex, char *userStringInput);
 void SetNewLocation(struct Room roomArray[], int  userIndex, char *userStringInput);
+void TimeKeep();
+
+/*
+NAME
+
+SYNOPSIS
+
+DESCRIPTION
+
+*/
+void TimeKeep()
+{
+	printf("time is:\n\n");	
+}
 
 /*
 NAME
@@ -532,6 +546,8 @@ void PlayGame(struct Room roomArray[], int startIdx, int endIdx, int userIdx)
 	//what the TAs recommended be the max step count
 	int numSteps = 0;
 	int maxSteps = 100;
+	//bool to keep track of whether user entered time or valid room
+	int isTime = 0;
 
 	//create array to hold the names of rooms visited.
 	//char *roomsVisited[maxSteps + 1];
@@ -551,9 +567,18 @@ void PlayGame(struct Room roomArray[], int startIdx, int endIdx, int userIdx)
 
 		//get next room to go to as input from the user, and validate the input	
 		do{  
-			//print current room interface/prompt
-			CurRoomPrint(roomArray, userIdx);
-			
+			//if user entered a valid room (i.e. isTime is false)
+			if(isTime == 0)
+			{
+				//print current room interface/prompt
+				CurRoomPrint(roomArray, userIdx);
+			}			
+			//else the user entered "time" instead of a room. reset isTime to false
+			else
+			{
+				printf("WHERE TO? >");
+				isTime = 0;
+			}
 			//getline information adapted from:
 			//https://c-for-dummies.com/blog/?p=1112
 			char *buffer;
@@ -615,7 +640,10 @@ void PlayGame(struct Room roomArray[], int startIdx, int endIdx, int userIdx)
 		}
 		else
 		{
-
+			TimeKeep();
+			
+			//set isTime bool to true
+			isTime = 1;
 		}
 	}
 

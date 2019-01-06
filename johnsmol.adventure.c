@@ -181,6 +181,18 @@ void TimeKeep()
 		perror("time not given in am or pm, error!");
 		exit(1);
 	}
+
+	//getting current directory adapted from:
+	//https://stackoverflow.com/questions/298510/how-to-get-the-current-directory-in-a-c-program
+	char cwd[500];
+	if(getcwd(cwd, sizeof(cwd)) == NULL)
+	{
+		perror("getcwd() error");
+		exit(1);
+	}
+
+	//change directory back one step from rooms directory (to directory with game files)
+	chdir("..");
 		
 	//file output adapted from (in addition to lectures):
 	//https://www.cs.bu.edu/teaching/c/file-io/intro/ and
@@ -198,6 +210,15 @@ void TimeKeep()
 	fprintf(outputFile, formattedBuffer);
 
 	fclose(outputFile);
+
+	//change directory back to room directory
+	chdir(cwd);
+	char newCwd[500];
+	if(getcwd(newCwd, sizeof(newCwd)) == NULL)
+	{
+		perror("getcwd() error");
+		exit(1);
+	}
 }
 
 /*

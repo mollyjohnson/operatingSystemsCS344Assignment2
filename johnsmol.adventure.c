@@ -71,7 +71,36 @@ DESCRIPTION
 */
 void TimeKeep()
 {
-	printf("time is:\n\n");	
+	//strftime use adapted from:
+	//https://linux.die.net/man/3/strftime and
+	//https://www.tutorialspoint.com/c_standard_library/c_function_strftime.htm
+	time_t rawtime;
+	struct tm *info;
+	char buffer[256];
+	memset(buffer, '\0', sizeof(buffer));
+
+	time(&rawtime);
+	info = localtime(&rawtime);
+	strftime(buffer, 256, "%I:%M%p, %A, %B %d, %Y ", info);
+
+	//check if time string has a leading zero (shouldn't according to the given example)
+	if(buffer[0] == '0')
+	{
+		//shift chars to the left to eliminate leading zero (as that's the format in given example)
+		int k;
+		k = 0;
+		while(buffer[k] !='\0')
+		{
+			buffer[k] = buffer[k + 1];
+			k++;
+		}
+
+	}
+
+	//replace upper case AM or PM with lower case am or pm (as that's the format in given example)
+
+		
+	printf(" %s\n\n", buffer);
 }
 
 /*

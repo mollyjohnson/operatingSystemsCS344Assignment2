@@ -182,7 +182,22 @@ void TimeKeep()
 		exit(1);
 	}
 		
-	printf(" %s\n\n", formattedBuffer);
+	//file output adapted from (in addition to lectures):
+	//https://www.cs.bu.edu/teaching/c/file-io/intro/ and
+	//https://www.tutorialspoint.com/cprogramming/c_file_io.htm
+	FILE *outputFile;
+	outputFile = fopen("currentTime.txt", "a+");
+
+	if(outputFile == NULL)
+	{
+		perror("file would not open.");
+		exit(1);
+	}
+
+	//print the properly formatted time and date to the file currentTime.txt
+	fprintf(outputFile, formattedBuffer);
+
+	fclose(outputFile);
 }
 
 /*

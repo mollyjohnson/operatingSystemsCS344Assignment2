@@ -1,14 +1,16 @@
 /*
 Name: Molly Johnson
 ONID: johnsmol
-CS 344 Fall 2018
+CS 344 Winter 2019
 Assignment 2
-Due: 10/25/18
+Due: 2/13/19
 All information used to create this code is adapted from the OSU CS 344 Fall 2018
 lectures and assignment instructions/hints unless otherwise specifically indicated.
 Code for building the rooms adapted from the pseudocode provided by the instructor
 (2.2 Program Outlining in Program 2). For my version of this program, room files 
 will be named the room name of the room they're associated with for simplicity.
+Also adapted from my own work previously created on 10/25/18 (I took the class
+previously in the Fall 2018 term but am retaking for a better grade).
 */
 
 #include <sys/types.h>

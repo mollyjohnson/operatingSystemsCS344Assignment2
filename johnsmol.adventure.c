@@ -35,6 +35,12 @@ previously in the Fall 2018 term but am retaking for a better grade).
 #define MID_ROOM "MID_ROOM"
 #define EMPTY "EMPTY"
 
+//create mutex (created global mutex since mutex wouldn't be accessible for locking/unlocking
+//in the TimeKeep function unless either the mutex was passed in as an argument or made global,
+//and multiple resources found online mentioned passing mutexes as arguments as bad form, see
+//https://stackoverflow.com/questions/34553232/why-is-passing-references-to-the-mutex-class-not-a-good-design/34619777
+pthread_mutex_t myMutex = PTHREAD_MUTEX_INITIALIZER;
+
 //create Room struct
 struct Room
 {
@@ -74,6 +80,9 @@ DESCRIPTION
 */
 void* TimeKeep(void* argument)
 {
+	//lock mutex (this call will block if called when mutex is locked)
+	pthread_mutex_lock(&myMutex);
+
 	//strftime use adapted from:
 	//https://linux.die.net/man/3/strftime and
 	//https://www.tutorialspoint.com/c_standard_library/c_function_strftime.htm
@@ -150,7 +159,7 @@ void* TimeKeep(void* argument)
 	
 	//add newline character so if user enters "time" again the new time will
 	//go on the next line
-	//fprintf(outputFile, "\n");
+	fprintf(outputFile, "\n");
 
 	fclose(outputFile);
 
@@ -162,6 +171,9 @@ void* TimeKeep(void* argument)
 		perror("getcwd() error");
 		exit(1);
 	}
+
+	//unlock mutex
+	pthread_mutex_unlock(&myMutex);
 
 	return NULL;
 }
@@ -703,22 +715,22 @@ void PlayGame(struct Room roomArray[], int startIdx, int endIdx, int userIdx)
 	//(in addition to the lecture) psuedocode provided by the instructor/TAs on
 	//a Piazza post from the Fall 2018 term.
 	
-	//create and lock mutex
-	pthread_mutex_t myMutex = PTHREAD_MUTEX_INITIALIZER;
+	//lock mutex
 	pthread_mutex_lock(&myMutex);
 
 	//create time thread
-	pthread_t thread;
+	pthread_t threads[2];
 	int result_code;
-	result_code = pthread_create(&thread, NULL, TimeKeep, NULL);
+	result_code = pthread_create(&threads[0], NULL, TimeKeep, NULL);
 
-	//make sure result code 0 (thread creation successful)
+	//make sure result code == 0 (thread creation successful)
 	assert(0 == result_code);
 
 	//max steps will be 100 based on OSU cs344 slack posts about
 	//what the TAs recommended be the max step count
 	int numSteps = 0;
 	int maxSteps = 100;
+	
 	//bool to keep track of whether user entered time or valid room
 	int isTime = 0;
 
@@ -816,11 +828,19 @@ void PlayGame(struct Room roomArray[], int startIdx, int endIdx, int userIdx)
 			pthread_mutex_unlock(&myMutex);
 
 			//join time thread (this thread dies after finishes executing)
+			result_code = pthread_join(threads[0], NULL);
+		
+			//make sure result code == 0 (thread join successful)
+			assert(0 == result_code);
 			
-
 			//lock mutex again
+			pthread_mutex_lock(&myMutex);
 
 			//create another time thread
+			result_code = pthread_create(&threads[1], NULL, TimeKeep, NULL);
+
+			//make sure result code == 0 (thread creation successful)
+			assert(0 == result_code);
 			
 			//set isTime bool to true
 			isTime = 1;

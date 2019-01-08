@@ -159,18 +159,18 @@ void* TimeKeep(void* argument)
 	
 	//add newline character so if user enters "time" again the new time will
 	//go on the next line
-	fprintf(outputFile, "\n");
+	//fprintf(outputFile, "\n");
 
 	fclose(outputFile);
 
 	//change directory back to room directory
-	chdir(cwd);
-	char newCwd[500];
-	if(getcwd(newCwd, sizeof(newCwd)) == NULL)
-	{
-		perror("getcwd() error");
-		exit(1);
-	}
+	//chdir(cwd);
+	//char newCwd[500];
+	//if(getcwd(newCwd, sizeof(newCwd)) == NULL)
+	//{
+	//	perror("getcwd() error");
+	//	exit(1);
+	//}
 
 	//unlock mutex
 	pthread_mutex_unlock(&myMutex);
@@ -844,6 +844,38 @@ void PlayGame(struct Room roomArray[], int startIdx, int endIdx, int userIdx)
 			
 			//set isTime bool to true
 			isTime = 1;
+
+			//read in the date/time info from the currentTime.txt file
+			//fopen use adapted from my own work created 10/25/18 as well as
+			//https://www.tutorialspoint.com/c_standard_library/c_function_fopen.htm
+			FILE *timeFile;
+
+			//"r" means read only
+			timeFile = fopen("currentTime.txt", "r");
+			
+			if(timeFile == NULL)
+			{
+				perror("could not open currentTime.txt file correctly");
+				exit(1);
+			}
+
+			char timeFileString [1000];
+
+			//using fgets to read a file adapted from:
+			//http://www.cplusplus.com/reference/cstdio/fgets/ and my own work (10/25/18)
+			if(fgets(timeFileString, 1000, timeFile) == NULL)
+			{
+				perror("could not open currentTime.txt file correctly");
+				exit(1);
+			}
+			
+			//remove trailing \n that fgets adds and set to null terminator instead
+			timeFileString[strcspn(timeFileString, "\n")] = '\0';
+
+			//print time to user
+			printf(" %s\n\n", timeFileString);
+
+			fclose(timeFile);	
 		}
 	}
 

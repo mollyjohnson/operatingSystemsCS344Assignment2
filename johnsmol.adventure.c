@@ -61,81 +61,18 @@ void PlayGame(struct Room roomArray[], int startIdx, int endIdx, int userIdx);
 void CurRoomPrint(struct Room roomArray[], int userIndex);
 int InputValidation(struct Room roomArray[], int userIndex, char *userStringInput);
 void SetNewLocation(struct Room roomArray[], int  userIndex, char *userStringInput);
-void TimeKeep();
+void* TimeKeep(void* argument);
 char *ReplaceString(char *str, char *orig, char *rep);
 
 /*
 NAME
-replacestring
-SYNOPSIS
-replaces a string with a new string
-DESCRIPTION
-replaces specified substring of a string with a new substring.
-Adapted from my own work 11/14/18 and:
-https://stackoverflow.com/questions/32413667/replace-all-occurrences-of-a-substring-in-a-string-in-c and
-https://www.geeksforgeeks.org/c-program-replace-word-text-another-given-word/
-*/
-char *ReplaceString(char *str, char *orig, char *rep)
-{
-	char *result;
-	int i = 0;
-	int cnt = 0;
-
-	//save lengths of the replacement substring and the original substring
-	int newWlen = strlen(rep);
-	int oldWlen = strlen(orig);
-
-	//go through each char in the original long string, to check for occurrences of the original substring
-	for(i = 0; str[i] != '\0'; i++)
-	{
-		if(strstr(&str[i], orig) == &str[i])
-		{
-			cnt++;
-			i += oldWlen - 1;
-		}
-	}
-
-	result = (char *)malloc(i + cnt *(newWlen - oldWlen) + 1);
-	i = 0;
-
-	//replace each occurrence of the orig substring with the new substring
-	while (*str)
-	{
-		if(strstr(str, orig) == str)
-		{
-			strcpy(&result[i], rep);
-			i += newWlen;
-			str += oldWlen;
-		}
-		else
-		{
-			result[i++] = *str++;
-		}
-	}
-
-	//set result to a new string to be returned so result memory can be freed
-	result[i] = '\0';
-	static char returnStr[256];
-	memset(returnStr, '\0', sizeof(returnStr));
-	strcpy(returnStr, result);
-
-	//free memory
-	free(result);
-	result = NULL;
-
-	//return newly expanded string
-	return returnStr;
-}
-
-/*
-NAME
 
 SYNOPSIS
 
 DESCRIPTION
 
 */
-void TimeKeep()
+void* TimeKeep(void* argument)
 {
 	//strftime use adapted from:
 	//https://linux.die.net/man/3/strftime and
@@ -225,7 +162,74 @@ void TimeKeep()
 		perror("getcwd() error");
 		exit(1);
 	}
+
+	return NULL;
 }
+
+/*
+NAME
+replacestring
+SYNOPSIS
+replaces a string with a new string
+DESCRIPTION
+replaces specified substring of a string with a new substring.
+Adapted from my own work 11/14/18 and:
+https://stackoverflow.com/questions/32413667/replace-all-occurrences-of-a-substring-in-a-string-in-c and
+https://www.geeksforgeeks.org/c-program-replace-word-text-another-given-word/
+*/
+char *ReplaceString(char *str, char *orig, char *rep)
+{
+	char *result;
+	int i = 0;
+	int cnt = 0;
+
+	//save lengths of the replacement substring and the original substring
+	int newWlen = strlen(rep);
+	int oldWlen = strlen(orig);
+
+	//go through each char in the original long string, to check for occurrences of the original substring
+	for(i = 0; str[i] != '\0'; i++)
+	{
+		if(strstr(&str[i], orig) == &str[i])
+		{
+			cnt++;
+			i += oldWlen - 1;
+		}
+	}
+
+	result = (char *)malloc(i + cnt *(newWlen - oldWlen) + 1);
+	i = 0;
+
+	//replace each occurrence of the orig substring with the new substring
+	while (*str)
+	{
+		if(strstr(str, orig) == str)
+		{
+			strcpy(&result[i], rep);
+			i += newWlen;
+			str += oldWlen;
+		}
+		else
+		{
+			result[i++] = *str++;
+		}
+	}
+
+	//set result to a new string to be returned so result memory can be freed
+	result[i] = '\0';
+	static char returnStr[256];
+	memset(returnStr, '\0', sizeof(returnStr));
+	strcpy(returnStr, result);
+
+	//free memory
+	free(result);
+	result = NULL;
+
+	//return newly expanded string
+	return returnStr;
+}
+
+
 
 /*
 NAME
@@ -695,6 +699,22 @@ path taken
 */
 void PlayGame(struct Room roomArray[], int startIdx, int endIdx, int userIdx)
 {
+	//info for steps to use mutexes and threads in this assignment adapted from
+	//(in addition to the lecture) psuedocode provided by the instructor/TAs on
+	//a Piazza post from the Fall 2018 term.
+	
+	//create and lock mutex
+	pthread_mutex_t myMutex = PTHREAD_MUTEX_INITIALIZER;
+	pthread_mutex_lock(&myMutex);
+
+	//create time thread
+	pthread_t thread;
+	int result_code;
+	result_code = pthread_create(&thread, NULL, TimeKeep, NULL);
+
+	//make sure result code 0 (thread creation successful)
+	assert(0 == result_code);
+
 	//max steps will be 100 based on OSU cs344 slack posts about
 	//what the TAs recommended be the max step count
 	int numSteps = 0;
@@ -717,7 +737,6 @@ void PlayGame(struct Room roomArray[], int startIdx, int endIdx, int userIdx)
 
 	while((numSteps < maxSteps) && (IsEndRoom(roomArray, endIdx) == 0))
 	{ 
-
 		//get next room to go to as input from the user, and validate the input	
 		do{  
 			//if user entered a valid room (i.e. isTime is false)
@@ -781,7 +800,7 @@ void PlayGame(struct Room roomArray[], int startIdx, int endIdx, int userIdx)
 		}while((InputValidation(roomArray, userIdx, userInput) == 0) && (strcmp(userInput, "time") != 0)); //== 0 means input was not valid or that user entered "time"
 		
 		//now that have obtained valid user input, need to set current room to new room location
-		if(strcmp(userInput, "time") != 0)
+		if(strcmp(userInput, "time") != 0) //if user didn't enter "time"
 		{
 			SetNewLocation(roomArray, userIdx, userInput);
 			//increment steps since have moved to a new room successfully
@@ -791,9 +810,17 @@ void PlayGame(struct Room roomArray[], int startIdx, int endIdx, int userIdx)
 			roomsVisited[numSteps - 1] = malloc(32 * sizeof(char));
 			strcpy(roomsVisited[numSteps - 1], roomArray[userIdx].roomName);
 		}
-		else
+		else //if user entered "time"
 		{
-			TimeKeep();
+			//unlock mutex
+			pthread_mutex_unlock(&myMutex);
+
+			//join time thread (this thread dies after finishes executing)
+			
+
+			//lock mutex again
+
+			//create another time thread
 			
 			//set isTime bool to true
 			isTime = 1;

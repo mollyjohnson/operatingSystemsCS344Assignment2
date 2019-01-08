@@ -145,12 +145,17 @@ void* TimeKeep(void* argument)
 	//file output adapted from (in addition to lectures):
 	//https://www.cs.bu.edu/teaching/c/file-io/intro/ and
 	//https://www.tutorialspoint.com/cprogramming/c_file_io.htm
+	//file permissions information from:
+	//https://dineshbhopal.wordpress.com/2014/12/03/php-r-r-w-w-file-handling/
+	//"w" used instead of "a" so that only the most updated date/time is written
+	//to the file (i.e. a new file is created or an old one is overwritten) instead
+	//of appended to.
 	FILE *outputFile;
-	outputFile = fopen("currentTime.txt", "a+");
+	outputFile = fopen("currentTime.txt", "w+");
 
 	if(outputFile == NULL)
 	{
-		perror("file would not open.");
+		perror("output file would not open.");
 		exit(1);
 	}
 

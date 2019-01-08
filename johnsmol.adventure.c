@@ -210,9 +210,10 @@ void TimeKeep()
 
 	//print the properly formatted time and date to the file currentTime.txt
 	fprintf(outputFile, formattedBuffer);
+	
 	//add newline character so if user enters "time" again the new time will
 	//go on the next line
-	fprintf(outputFile, "\n");
+	//fprintf(outputFile, "\n");
 
 	fclose(outputFile);
 

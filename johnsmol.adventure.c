@@ -132,15 +132,15 @@ void* TimeKeep(void* argument)
 
 	//getting current directory adapted from:
 	//https://stackoverflow.com/questions/298510/how-to-get-the-current-directory-in-a-c-program
-	char cwd[500];
-	if(getcwd(cwd, sizeof(cwd)) == NULL)
-	{
-		perror("getcwd() error");
-		exit(1);
-	}
+	//char cwd[500];
+	//if(getcwd(cwd, sizeof(cwd)) == NULL)
+	//{
+	//	perror("getcwd() error");
+	//	exit(1);
+	//}
 
 	//change directory back one step from rooms directory (to directory with game files)
-	chdir("..");
+	//chdir("..");
 		
 	//file output adapted from (in addition to lectures):
 	//https://www.cs.bu.edu/teaching/c/file-io/intro/ and
@@ -768,6 +768,7 @@ void PlayGame(struct Room roomArray[], int startIdx, int endIdx, int userIdx)
 				printf("WHERE TO? >");
 				isTime = 0;
 			}
+			
 			//getline information adapted from:
 			//https://c-for-dummies.com/blog/?p=1112
 			char *buffer;

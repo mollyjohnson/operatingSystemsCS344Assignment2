@@ -4,7 +4,7 @@ ONID: johnsmol
 CS 344 Winter 2019
 Assignment 2
 Due: 2/13/19
-All information used to create this code is adapted from the OSU CS 344 Fall 2018
+All information used to create this code is adapted from the OSU CS 344 Winter 2019
 lectures and assignment instructions/hints unless otherwise specifically indicated.
 Code for building the rooms adapted from the pseudocode provided by the instructor
 (2.2 Program Outlining in Program 2). For my version of this program, room files 

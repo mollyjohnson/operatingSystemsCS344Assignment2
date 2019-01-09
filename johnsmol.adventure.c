@@ -72,11 +72,12 @@ char *ReplaceString(char *str, char *orig, char *rep);
 
 /*
 NAME
-
+timekeep
 SYNOPSIS
-
+gets current date/time, prints to file
 DESCRIPTION
-
+locks mutex, gets current date/time and formats this information according to
+assignment specs, prints this information to file "currentTime.txt", unlocks mutex.
 */
 void* TimeKeep(void* argument)
 {
@@ -130,18 +131,6 @@ void* TimeKeep(void* argument)
 		exit(1);
 	}
 
-	//getting current directory adapted from:
-	//https://stackoverflow.com/questions/298510/how-to-get-the-current-directory-in-a-c-program
-	//char cwd[500];
-	//if(getcwd(cwd, sizeof(cwd)) == NULL)
-	//{
-	//	perror("getcwd() error");
-	//	exit(1);
-	//}
-
-	//change directory back one step from rooms directory (to directory with game files)
-	//chdir("..");
-		
 	//file output adapted from (in addition to lectures):
 	//https://www.cs.bu.edu/teaching/c/file-io/intro/ and
 	//https://www.tutorialspoint.com/cprogramming/c_file_io.htm
@@ -162,20 +151,7 @@ void* TimeKeep(void* argument)
 	//print the properly formatted time and date to the file currentTime.txt
 	fprintf(outputFile, formattedBuffer);
 	
-	//add newline character so if user enters "time" again the new time will
-	//go on the next line
-	//fprintf(outputFile, "\n");
-
 	fclose(outputFile);
-
-	//change directory back to room directory
-	//chdir(cwd);
-	//char newCwd[500];
-	//if(getcwd(newCwd, sizeof(newCwd)) == NULL)
-	//{
-	//	perror("getcwd() error");
-	//	exit(1);
-	//}
 
 	//unlock mutex
 	pthread_mutex_unlock(&myMutex);
@@ -245,8 +221,6 @@ char *ReplaceString(char *str, char *orig, char *rep)
 	//return newly expanded string
 	return returnStr;
 }
-
-
 
 /*
 NAME
@@ -373,9 +347,9 @@ void InitializeRooms(char *directoryNameIn, struct Room roomArray[])
 		closedir(newestDir);
 	}
 
-	//change directory back one directory (".." means to go back one one directory),
-	//so that the currentTime.txt file will be created in the proper directory (the
-	//same directory the game itself is in)
+	//change current directory back one directory (".." means to go back one one directory),
+	//so that the currentTime.txt file created later will be created in the proper directory
+	//(the same directory the game itself is in)
 	chdir("..");
 }
 
@@ -411,7 +385,7 @@ get dir name
 SYNOPSIS
 gets the directory name for the files 
 DESCRIPTION
-gets the directory name the file are in and returns this name
+gets the directory name the files are in and returns this name
 */
 char *GetDirName()
 {
@@ -560,6 +534,7 @@ int GetEndIndex(struct Room roomArray[])
 
 	return endIndex;
 }
+
 /*
 NAME
 temp print funct for testing
@@ -589,7 +564,7 @@ void Print(struct Room roomArray[])
 
 /*
 NAME
-initializeuserstard
+initializeuserstart
 SYNOPSIS
 initializes the user's starting location
 DESCRIPTION
@@ -608,6 +583,7 @@ void InitializeUserStart(struct Room roomArray[], int userIdx, int startIdx)
 		strcpy(roomArray[userIdx].connectionNames[k], roomArray[startIdx].connectionNames[k]);
 	}
 }
+
 /*
 NAME
 isendroom
@@ -717,7 +693,7 @@ primary gameplay function
 DESCRIPTION
 keeps track of number of steps and rooms visited, takes in user input, has primary gamplay loop that goes until
 max steps reached or user finds end room. prints message to user upon finding end room, num steps taken, and 
-path taken
+path taken. uses mutexes and threads and gets current time/date if user enters "time".
 */
 void PlayGame(struct Room roomArray[], int startIdx, int endIdx, int userIdx)
 {
@@ -757,6 +733,7 @@ void PlayGame(struct Room roomArray[], int startIdx, int endIdx, int userIdx)
 		exit(1);
 	}	
 
+	//main gameplay loop
 	while((numSteps < maxSteps) && (IsEndRoom(roomArray, endIdx) == 0))
 	{ 
 		//get next room to go to as input from the user, and validate the input	

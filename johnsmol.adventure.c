@@ -4,7 +4,7 @@ ONID: johnsmol
 CS 344 Winter 2019
 Assignment 2
 Due: 2/13/19
-All information used to create this code is adapted from the OSU CS 344 Fall 2018
+All information used to create this code is adapted from the OSU CS 344 Winter 2019 
 lectures and assignment instructions/hints unless otherwise specifically indicated.
 Also adapted from my own work previously created on 10/25/18 (I took the class
 previously in the Fall 2018 term but am retaking for a better grade).

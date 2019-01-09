@@ -372,6 +372,11 @@ void InitializeRooms(char *directoryNameIn, struct Room roomArray[])
 		//close the open directory
 		closedir(newestDir);
 	}
+
+	//change directory back one directory (".." means to go back one one directory),
+	//so that the currentTime.txt file will be created in the proper directory (the
+	//same directory the game itself is in)
+	chdir("..");
 }
 
 /*

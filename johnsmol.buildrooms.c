@@ -35,7 +35,7 @@ previously in the Fall 2018 term but am retaking for a better grade).
 #define MID_ROOM "MID_ROOM"
 #define EMPTY "EMPTY"
 
-//create Room struct
+//create Room struct w/ room type , num of connections, name, and all connection names
 struct Room
 {
 	char *roomType;
@@ -74,20 +74,25 @@ int IsGraphFull(struct Room roomArray[])
 	//int to use as a "bool" since raw C doesn't allow bool varaibles. 1=true, 0=false
 	//initialize to start with as false 
 	int boolVal = 0;
+
+	//used to count num of full rooms (i.e. rooms w 3-6 connections)
 	int fullRoomCounter=0;
 
 	int i;
+
+	//loop through all rooms
 	for (i = 0; i < NUM_ROOMS; i++)
 	{
+		//if the number of connections is less than 0 somehow or is greater than the max allowed (6), error
 		if ((roomArray[i].numConnections < 0) || (roomArray[i].numConnections > MAX_CONNECTIONS))
 		{
-			printf("error, too many room connections!\n");
-			//break out of loop
-			i = NUM_ROOMS + 100;
+			perror("error, invalid num of  room connections!");
+			exit(1);
 		}
+		//else if num of connections is greater than or equal to 3 and less than or equal to 6 (i.e. "full")
 		else if ((roomArray[i].numConnections <= MAX_CONNECTIONS) && (roomArray[i].numConnections >= MIN_CONNECTIONS))
 		{
-			//if this room is full, increment room counter
+			//if this room is full, increment full room counter
 			fullRoomCounter++;
 		}
 	}
@@ -96,6 +101,7 @@ int IsGraphFull(struct Room roomArray[])
 	//change bool to true if graph is full
 	if (fullRoomCounter == NUM_ROOMS)
 	{
+		//if graph full, set bool to true
 		boolVal = 1;
 	}
 	return boolVal;
@@ -118,10 +124,13 @@ void AddRandomConnection(struct Room roomArray[])
 	//initialize bool value to false
 	int canAddRoom1 = 0;
 	
+	//loop while canAddRoom1 is false (i.e. you can't add a connection from rand room 1)
 	while (canAddRoom1 == 0)
 	{
+		//room 1 index is random num between 0 (i.e. first index)  and 1 less than the number of rooms (i.e. last index)
 		room1Index = GetRandomNum(0, NUM_ROOMS - 1);
-		//check if you can add a connection from first room
+
+		//check if you can add a connection from rand room 1
 		canAddRoom1 = CanAddConnectionFrom(roomArray, room1Index);
 	}
 
@@ -137,10 +146,12 @@ void AddRandomConnection(struct Room roomArray[])
 		//get random room index 2
 		room2Index = GetRandomNum(0, NUM_ROOMS - 1);
 
+	//conditions of while loop are while you can't add a connection from room 2, room 1 and 2 are the same, or the connection
+	//between room 1 and 2 already exists
 	}while(CanAddConnectionFrom(roomArray, room2Index) == 0 || IsSameRoom(roomArray, room1Index, room2Index) == 1 || 
 		ConnectionAlreadyExists(roomArray, room1Index, room2Index) == 1);
 
-	//connect rooms
+	//connect rooms 1 and 2
 	ConnectRoom(roomArray, room1Index, room2Index);
 }
 
@@ -155,9 +166,10 @@ sets it as "mid room" type, and 0 connections). returns the struct.
 */
 struct Room InitializeRandomRoom(char *nameChoices[])
 {
+	//create struct for the random room
 	struct Room randRoom;
 
-	//get random index
+	//get random index between 0 and the number of name options - 1 (inclusive)
 	int randIndex = GetRandomNum(0, NUM_NAME_OPTIONS - 1);
 
 	//initialize all room types to MID_ROOM (one start and one end will be randomized after initialization)
@@ -172,8 +184,11 @@ struct Room InitializeRandomRoom(char *nameChoices[])
 	//initialize the max number of connections for the room all to "empty" since
 	//no rooms have been connected yet
 	int i = 0;
+
+	//loop through all connections
 	for(i = 0; i < MAX_CONNECTIONS; i++)
 	{
+		//set all connections to empty
 		randRoom.connections[i] = EMPTY;
 	}
 
@@ -194,6 +209,7 @@ int CanAddConnectionFrom(struct Room roomArray[], int index)
 	//initialize to true
 	int boolVal = 1;
 
+	//if the max number of connections have already been reached 
 	if(roomArray[index].numConnections >= MAX_CONNECTIONS)
 	{
 		//if max number of connections is already reached, set to false
@@ -220,9 +236,12 @@ int ConnectionAlreadyExists(struct Room roomArray[], int index1, int index2)
 	int boolVal = 0;
 
 	int i;
+
+	//loop through all connections
 	for(i = 0; i < MAX_CONNECTIONS; i++)
 	{
-		//check if the rooms are connected by using strcmp to compare each element of the "connections" array.
+		//check if the rooms are connected by using strcmp to compare each element of the "connections" array of room index 1
+		//with the room name of room index 2.
 		//0 means the connection matched.
 		if(strcmp(roomArray[index1].connections[i], roomArray[index2].roomName) == 0)
 		{
@@ -233,6 +252,7 @@ int ConnectionAlreadyExists(struct Room roomArray[], int index1, int index2)
 			i = MAX_CONNECTIONS + 100;
 		}
 	}
+
 	return boolVal;
 }
 
@@ -247,27 +267,37 @@ finds the next empty connection for a room and connects it to another room
 void ConnectRoom(struct Room roomArray[], int index1, int index2)
 {
 	int m;
+
+	//loop through all connections
 	for (m = 0; m < MAX_CONNECTIONS; m++)
 	{
-		//make connection at "empty" connection for the room
+		//make connection at next "empty" connection for the room
 		if(strcmp(roomArray[index1].connections[m], EMPTY) == 0)
 		{
+			//at index 1 room's first empty connection, set it to the room name of index 2's room
 			roomArray[index1].connections[m] = roomArray[index2].roomName;	
 
 			//break out of loop
 			m = MAX_CONNECTIONS + 100;
+
+			//increment num of connections for index 1 room
 			roomArray[index1].numConnections++;
 		}
 	}
 
+	//loop through all connections
 	for (m = 0; m < MAX_CONNECTIONS; m++)
 	{
 		//make connection at "empty" connection for the room
 		if(strcmp(roomArray[index2].connections[m], EMPTY) == 0)
 		{
+			//at index 2 room's first empty connection, set it to the room name of index 1's room
 			roomArray[index2].connections[m] = roomArray[index1].roomName;	
+
 			//break out of loop
 			m = MAX_CONNECTIONS + 100;
+
+			//increment num of connections for index 2 room
 			roomArray[index2].numConnections++;
 		}
 	}
@@ -290,6 +320,7 @@ int IsSameRoom(struct Room roomArray[], int index1, int index2)
 	//use strcmp to compare the name strings (return of 0 means the strings were equal)
 	if (strcmp(roomArray[index1].roomName, roomArray[index2].roomName) == 0)
 	{
+		//if two room names match they're the same room, set bool to true
 		boolVal = 1;
 	}
 
@@ -318,14 +349,22 @@ char *GetFolderName()
 	//get process id (an int)
 	int pid = getpid();
 
-	//convert int pid into string pid
+	//get length of the pid
 	int length = snprintf( NULL, 0, "%d", pid );
+
+	//malloc string version of the PID
 	char *stringPID = malloc( length + 1 );
+
+	//use snprintf to get the string version of the pid 
 	snprintf( stringPID, length + 1, "%d", pid );
+
+	//copy the string pid so the stringPID variable that was malloc'd can be freed
 	char *copyStringPID = stringPID;
 
 	//concatenate the folder name with the string version of the pid
 	strcat(folderName, copyStringPID);
+
+	//free the stringPID
 	free(stringPID);
 
 	return folderName;
@@ -341,6 +380,8 @@ uses rand() to get a random num between a min value and max value passed in. ret
 */
 int GetRandomNum(int minNum, int maxNum)
 {
+	//use rand() function (seeded w srand() once in main) to get a number between the min and max num.
+	//formula obtained from my OSU CS 162 notes from the Winter 2017 quarter.
 	int randNum = (rand() % (maxNum - minNum + 1) + minNum);
 
 	return randNum;
@@ -356,14 +397,25 @@ gives a random start room index and end room index for the rooms
 */
 void RandomStartEnd(struct Room roomArray[NUM_ROOMS], int *startIn, int *endIn)
 {
+	//get a random start between 0 (first index) and number of rooms - 1 (last index)
 	int randStart = GetRandomNum(0, NUM_ROOMS - 1);
+
 	int randEnd;
+
+	//get random end index
 	do{
+		//get a random start between 0 (first index) and number of rooms - 1 (last index)
 		randEnd = GetRandomNum(0, NUM_ROOMS - 1);
+		
+	//use loop condition that random start and random end indices cannot be the same number to ensure no overwrites for room type
 	}while(randStart == randEnd);
 
+	//set the room types of the appropriate indices to the start and end rooms
 	roomArray[randStart].roomType = START_ROOM;
 	roomArray[randEnd].roomType = END_ROOM;
+
+	//set the random start and end to the start and end values passed using pointers from main (thus maintaining their values in main since they
+	//weren't passed in by value)
 	*startIn = randStart;
 	*endIn = randEnd;
 }
@@ -381,6 +433,8 @@ void InitializeAllRooms(struct Room roomArray[], char *nameChoices[])
 {
 	int j = 0;
 	int k = 0;
+
+	//loop through all rooms
 	for (j = 0; j < NUM_ROOMS; j++)
 	{
 		//initialize each room randomly
@@ -389,6 +443,7 @@ void InitializeAllRooms(struct Room roomArray[], char *nameChoices[])
 		//if more than one room has been created, check that the current room name hasn't already been used
 		if (j > 0)
 		{
+			//loop through all rooms that have already been created
 			for (k = 0; k < j; k++)
 			{
 				//check if is a duplicate room (1 == true, is same room)
@@ -419,18 +474,27 @@ void Output(struct Room roomArray[], int index, char *typeRoom, char *directoryN
 	//https://www.cs.bu.edu/teaching/c/file-io/intro/ and
 	//https://www.tutorialspoint.com/cprogramming/c_file_io.htm
 	int k;
+
+	//create file stream
 	FILE *outputFile;
 	
 	//choose array size guaranteed to fit directory name plus pid plus max file name
 	//of 8 letters (as specified in the assignment instructions)
 	char fileName[100];
+
+	//copy the directory name to the file name
 	strcpy(fileName, directoryName);
+
 	char slash[] = "/";
+
+	//use strcat to make the file destination appear as "directoryName/roomName"
 	strcat(fileName, slash);
 	strcat(fileName, roomArray[index].roomName);
 
-	//create file name
+	//create file name with a+ (append)
 	outputFile = fopen(fileName, "a+"); 
+
+	//check if output file created is valid (NULL means couldn't be opened properly)
 	if(outputFile == NULL)
 	{
 		printf("\nFile would not open.\n");
@@ -452,6 +516,7 @@ void Output(struct Room roomArray[], int index, char *typeRoom, char *directoryN
 		fprintf(outputFile, "ROOM TYPE: ");
 		fprintf(outputFile, "%s\n", typeRoom);
 
+		//close output file
 		fclose(outputFile);
 	}
 }
@@ -483,7 +548,7 @@ int main ()
 	///https:stackoverflow.com/questions/822323/how-to-generate-a-random-int-in-c
 	srand(time(NULL));
 
-	//create array of 10 room name options
+	//create array of 10 room name options by hard-coding them per the instructions
 	char *nameOptions[NUM_NAME_OPTIONS] = { "KIRSTYS", "MOLLYS", "SOPHIES",
 			"BILLYS", "OTIES", "PERCYS", "MUNCHS", "MIKAS", "MAXS", "CHLOES" };
 
@@ -500,7 +565,7 @@ int main ()
 	RandomStartEnd(room, &startIndex, &endIndex);
 	
 	//create all connections in graph. 0=false in the while loop condition (since raw
-	//C doesn't allow bool variables)
+	//C doesn't allow bool variables). loop through and add random room connections until the graph is full
 	while (IsGraphFull(room) == 0)
 	{
 		AddRandomConnection(room);
@@ -511,10 +576,14 @@ int main ()
 
 	//print middle rooms
 	int n;
+
+	//loop through all rooms
 	for (n = 0; n < NUM_ROOMS; n++)
 	{
+		//make sure current room isn't start or end room
 		if ((n != startIndex) && (n != endIndex)) 
 		{
+			//if not start or end room, set as a mid room
 			Output(room, n, MID_ROOM, directoryName);
 		}
 	}

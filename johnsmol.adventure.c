@@ -36,12 +36,11 @@ previously in the Fall 2018 term but am retaking for a better grade).
 #define EMPTY "EMPTY"
 
 //create mutex (created global mutex since mutex wouldn't be accessible for locking/unlocking
-//in the TimeKeep function unless either the mutex was passed in as an argument or made global,
-//and multiple resources found online mentioned passing mutexes as arguments as bad form, see
-//https://stackoverflow.com/questions/34553232/why-is-passing-references-to-the-mutex-class-not-a-good-design/34619777
+//in the TimeKeep function unless either the mutex was passed in as an argument or made global
 pthread_mutex_t myMutex = PTHREAD_MUTEX_INITIALIZER;
 
-//create Room struct
+//create Room struct w/ room type , num of connections, name, all connection names,
+//and the struct array count (i.e. index of this room in the array of room structs)
 struct Room
 {
 	char *roomType;
@@ -60,7 +59,6 @@ void CallocRooms(struct Room roomArray[]);
 void FreeRooms(struct Room roomArray[]);
 int GetStartIndex(struct Room roomArray[]);
 int GetEndIndex(struct Room roomArray[]);
-void Print(struct Room roomArray[]);
 void InitializeUserStart(struct Room roomArray[], int userIdx, int startIdx);
 void ResetEmptyConnections(struct Room roomArray[], int roomIndex);
 void PlayGame(struct Room roomArray[], int startIdx, int endIdx, int userIdx);
@@ -68,7 +66,6 @@ void CurRoomPrint(struct Room roomArray[], int userIndex);
 int InputValidation(struct Room roomArray[], int userIndex, char *userStringInput);
 void SetNewLocation(struct Room roomArray[], int  userIndex, char *userStringInput);
 void* TimeKeep(void* argument);
-char *ReplaceString(char *str, char *orig, char *rep);
 
 /*
 NAME
@@ -78,70 +75,56 @@ gets current date/time, prints to file
 DESCRIPTION
 locks mutex, gets current date/time and formats this information according to
 assignment specs, prints this information to file "currentTime.txt", unlocks mutex.
+void* return type and argument used to match lecture example and so the function can
+be easily reused regardless of argument type or type of return value.
 */
 void* TimeKeep(void* argument)
 {
 	//lock mutex (this call will block if called when mutex is locked)
 	pthread_mutex_lock(&myMutex);
 
+	//use strftime to get current time in proper format.
 	//strftime use adapted from:
 	//https://linux.die.net/man/3/strftime and
-	//https://www.tutorialspoint.com/c_standard_library/c_function_strftime.htm
+	//https://www.tutorialspoint.com/c_standard_library/c_function_strftime.htm and
+	//https://apidock.com/ruby/DateTime/strftime
+
+	//create time_t and struct
 	time_t rawtime;
 	struct tm *info;
+
+	//create buffer for strftime results and memset with null term chars
 	char buffer[256];
 	memset(buffer, '\0', sizeof(buffer));
-	char formattedBuffer[256];
-	memset(formattedBuffer, '\0', sizeof(formattedBuffer));
 
+	//get the raw (unformatted) time
 	time(&rawtime);
+
+	//use time pointed by the rawtime to fill the struct with the local time values
 	info = localtime(&rawtime);
-	strftime(buffer, 256, "%I:%M%p, %A, %B %d, %Y ", info);
 
-	//check if time string has a leading zero (shouldn't according to the given example)
-	if(buffer[0] == '0')
-	{
-		//shift chars to the left to eliminate leading zero (as that's the format in given example)
-		int k;
-		k = 0;
-		while(buffer[k] !='\0')
-		{
-			buffer[k] = buffer[k + 1];
-			k++;
-		}
-
-	}
-
-	//replace upper case AM or PM with lower case am or pm (as that's the format in given example)
-	//check if is AM with strstr (if no "AM" in string, strstr will return null)
-	if(strstr(buffer, "AM") != NULL)
-	{
-		char *tempAM = ReplaceString(buffer, "AM", "am");
-		strcpy(formattedBuffer, tempAM);
-	}
-	//check if is PM with strstr (if no "PM" in string, strstr will return null)
-	else if(strstr(buffer, "PM") != NULL)
-	{
-		char *tempPM = ReplaceString(buffer, "PM", "pm");
-		strcpy(formattedBuffer, tempPM);
-	}
-	else
-	{
-		perror("time not given in am or pm, error!");
-		exit(1);
-	}
+	//put the formatted local time into the buffer
+	//%l gives the hour and removes a preceding zero if the hour is in single digits.
+	//%M will give the minutes
+	//%P gives am or pm in lower-case
+	//%A gives full day name
+	//%B gives full month name
+	//%d give day of the month (decimal form)
+	//%Y gives the year
+	strftime(buffer, 256, "%l:%M%P, %A, %B %d, %Y", info);
 
 	//file output adapted from (in addition to lectures):
 	//https://www.cs.bu.edu/teaching/c/file-io/intro/ and
 	//https://www.tutorialspoint.com/cprogramming/c_file_io.htm
 	//file permissions information from:
 	//https://dineshbhopal.wordpress.com/2014/12/03/php-r-r-w-w-file-handling/
-	//"w" used instead of "a" so that only the most updated date/time is written
-	//to the file (i.e. a new file is created or an old one is overwritten) instead
-	//of appended to.
+
+	//create output file with w+ so it can be created if doesn't exist or overwritten
+	//if does exist. name it currentTime.txt
 	FILE *outputFile;
 	outputFile = fopen("currentTime.txt", "w+");
 
+	//check that file was opened correctly (output == NULL means couldn't be opened correctly)
 	if(outputFile == NULL)
 	{
 		perror("output file would not open.");
@@ -149,77 +132,16 @@ void* TimeKeep(void* argument)
 	}
 
 	//print the properly formatted time and date to the file currentTime.txt
-	fprintf(outputFile, formattedBuffer);
-	
+	fprintf(outputFile, buffer);	
+
+	//close the output file
 	fclose(outputFile);
 
 	//unlock mutex
 	pthread_mutex_unlock(&myMutex);
 
+	//return null as return type can be any (void *) but there's no value needed to return since time was output to a file
 	return NULL;
-}
-
-/*
-NAME
-replacestring
-SYNOPSIS
-replaces a string with a new string
-DESCRIPTION
-replaces specified substring of a string with a new substring.
-Adapted from my own work 11/14/18 and:
-https://stackoverflow.com/questions/32413667/replace-all-occurrences-of-a-substring-in-a-string-in-c and
-https://www.geeksforgeeks.org/c-program-replace-word-text-another-given-word/
-*/
-char *ReplaceString(char *str, char *orig, char *rep)
-{
-	char *result;
-	int i = 0;
-	int cnt = 0;
-
-	//save lengths of the replacement substring and the original substring
-	int newWlen = strlen(rep);
-	int oldWlen = strlen(orig);
-
-	//go through each char in the original long string, to check for occurrences of the original substring
-	for(i = 0; str[i] != '\0'; i++)
-	{
-		if(strstr(&str[i], orig) == &str[i])
-		{
-			cnt++;
-			i += oldWlen - 1;
-		}
-	}
-
-	result = (char *)malloc(i + cnt *(newWlen - oldWlen) + 1);
-	i = 0;
-
-	//replace each occurrence of the orig substring with the new substring
-	while (*str)
-	{
-		if(strstr(str, orig) == str)
-		{
-			strcpy(&result[i], rep);
-			i += newWlen;
-			str += oldWlen;
-		}
-		else
-		{
-			result[i++] = *str++;
-		}
-	}
-
-	//set result to a new string to be returned so result memory can be freed
-	result[i] = '\0';
-	static char returnStr[256];
-	memset(returnStr, '\0', sizeof(returnStr));
-	strcpy(returnStr, result);
-
-	//free memory
-	free(result);
-	result = NULL;
-
-	//return newly expanded string
-	return returnStr;
 }
 
 /*
@@ -234,10 +156,15 @@ w fewer connections than its previous one the count will still be correct
 void ResetEmptyConnections(struct Room roomArray[], int roomIndex)
 {
 	int k;
+	
+	//loop through all connections
 	for(k = 0; k < MAX_CONNECTIONS; k++)
 	{
+		//copy "EMPTY" for all of the connection names to reset all connections for this room to empty
 		strcpy(roomArray[roomIndex].connectionNames[k], EMPTY);
 	}
+
+	//reset the number of connections for this room to zero
 	roomArray[roomIndex].connectionsCount = 0;
 }
 
@@ -257,90 +184,116 @@ void InitializeRooms(char *directoryNameIn, struct Room roomArray[])
 	//some parts of opening a directory and viewing files adapted from:
 	//directory manipulation lecture code by instroctor Brewster as well as
 	//stackoverflow.com/questions/11736060/how-to-read-all-files-in-a-folder-using-c
+	
+	//create directory stream and dirent struct (which keeps the file serial num
+	//and name of entry in the struct)
 	DIR *newestDir;
 	struct dirent *currentFile;
+
+	//open the directory name passed into the function
 	newestDir = opendir(directoryNameIn);
 	
 	//keep track of which file is being read
 	int fileNum = 0;
 
-	//if directory was able to be opened	
+	//if directory was able to be opened (if able to be opened will be > 0)	
 	if(newestDir > 0)
 	{
-		//while there are still files in the directory to be checked
+		//while there are still files in the directory to be checked (will == NULL when there are
+		//no more files to be checked).
 		while ((currentFile = readdir(newestDir)) != NULL)
 		{
-			//fseek() information obtained/adapted from"
-			//https://www.tutorialspoint.com/c_standard_library/c_function_fseek.htm and
-			//https://www.geeksforgeeks.org/fseek-in-c-with-example/
-			//strcmp == 0 means the strings matched
+			//this will make sure files only the room files get opened and not any "." or ".." hidden files
+			//(currentFile->d_name is the dirent struct file name)
 			if((strcmp(currentFile->d_name, ".") != 0) && (strcmp(currentFile->d_name, "..") != 0))
 			{
+				//create directory name with ./ preceding it so can be opened
 				char directory[] = "./";
 				strcat(directory, directoryNameIn);
-				const char *filePath = directory;
-				chdir(filePath);
-				char *roomFileName = currentFile->d_name;
-				int file_descriptor;
-				file_descriptor = open(roomFileName, O_RDWR); 
 
-				if (file_descriptor < 0)
+				//create file path (./directoryNameIn)
+				const char *filePath = directory;
+
+				//change directory to the current file path
+				chdir(filePath);
+
+				//set the room name to the current file's name
+				char *roomFileName = currentFile->d_name;
+
+				//create file stream and open the current room file (a+ to append to the file and update it)
+				FILE *roomFile;
+				roomFile= fopen(roomFileName, "a+");
+
+				//check if file was opened correctly. if not will return NULL.
+				if(roomFile == NULL)
 				{
-					fprintf(stderr, "could not open %s\n", roomFileName);
+					printf("\nFile would not open.\n");
 					exit(1);
 				}
-				else
+				else //if room file opened correctly
 				{
-					FILE *roomFile;
-					roomFile= fopen(roomFileName, "a+");
+					//fgets information adapted from:
+					//http://www.cplusplus.com/reference/cstdio/fgets/
+					//strstr information adapted from:
+					//https://www.geeksforgeeks.org/strstr-in-ccpp/
+					//removing first two chars adapted from:
+					//https://stackoverflow.com/questions/4761764/how-to-remove-first-three-characters-from-string-with-c
+					//removing trailing newline character adapted from:
+					//https://www.geeksforgeeks.org/strtok-strtok_r-functions-c-examples/
+					char myString[100];
 
-					if(roomFile == NULL)
+					//: is the token to be searched for using strtok
+					char *token = ":";
+					char *index;
+					int lineCount = 0;
+					int connectionsCounter = 0;
+					while(fgets(myString, 100, roomFile)) //check all lines of the file
 					{
-						printf("\nFile would not open.\n");
-						exit(1);
-					}
-					else
-					{
-						//fgets information adapted from:
-						//http://www.cplusplus.com/reference/cstdio/fgets/
-						//strstr information adapted from:
-						//https://www.geeksforgeeks.org/strstr-in-ccpp/
-						//removing first two chars adapted from:
-						//https://stackoverflow.com/questions/4761764/how-to-remove-first-three-characters-from-string-with-c
-						//removing trailing newline character adapted from:
-						//https://www.geeksforgeeks.org/strtok-strtok_r-functions-c-examples/
-						char myString[100];
-						char *token = ":";
-						char *index;
-						int lineCount = 0;
-						int connectionsCounter = 0;
-						while(fgets(myString, 100, roomFile))
+						//find the index of the token
+						index = strstr(myString, token); 
+
+						//remove the two preceding spaces that come after the ":" in the files but before file type, room name, or connection names
+						index +=2;
+
+						//remove the newline char fgets adds using strtok
+						char *savedString = strtok(index, "\n"); 
+
+						//if reading the first line of the file (i.e. room name)
+						if(lineCount == 0)
 						{
-							index = strstr(myString, token);
-							index +=2;
-							char *savedString = strtok(index, "\n"); 
-							if(lineCount == 0)
-							{
-								strcpy(roomArray[fileNum].roomName,savedString);
-							}
-							else if((strcmp(savedString, END_ROOM) == 0) || (strcmp(savedString, MID_ROOM) == 0) || (strcmp(savedString, START_ROOM) == 0))
-							{
-								strcpy(roomArray[fileNum].roomType, savedString);
-							}
-							else
-							{
-								strcpy(roomArray[fileNum].connectionNames[connectionsCounter], savedString);
-								connectionsCounter++;
-							}
-							lineCount++;
+							//copy the room name from the file to the current room struct's room name
+							strcpy(roomArray[fileNum].roomName,savedString);
 						}
-						roomArray[fileNum].connectionsCount = connectionsCounter;
-						fclose(roomFile);
+						//if reading a room type line in the file
+						else if((strcmp(savedString, END_ROOM) == 0) || (strcmp(savedString, MID_ROOM) == 0) || (strcmp(savedString, START_ROOM) == 0))
+						{
+							//copy the room type from the file to the current room struct's  rooom type
+							strcpy(roomArray[fileNum].roomType, savedString);
+						}
+						else //else it's reading a connection name from the file
+						{
+							//copy the connection from the file to the current room struct's next connection
+							strcpy(roomArray[fileNum].connectionNames[connectionsCounter], savedString);
+
+							//increment connections counter
+							connectionsCounter++;
+						}
+						//increment line counter (keeps track of which line in the file's being read)
+						lineCount++;
 					}
-					close(file_descriptor);
-					roomArray[fileNum].structArrayCt = fileNum;
-					fileNum++;
+					//set the current room struct's num of connections to the num of connections that have been added from
+					//the input file.
+					roomArray[fileNum].connectionsCount = connectionsCounter;
+
+					//close the current room file
+					fclose(roomFile);
 				}
+
+				//the current room struct's count (i.e. position in the array of room structs) is the file num
+				roomArray[fileNum].structArrayCt = fileNum;
+
+				//increment the file num
+				fileNum++;
 			}
 		}
 		//close the open directory
@@ -365,14 +318,20 @@ void FreeRooms(struct Room roomArray[])
 {
 	int k;
 	int h;
+	
+	//loop through all rooms in the array of room structs (+1 for player's current room)
 	for(k = 0; k < NUM_ROOMS + 1; k++)
 	{
+		//free room name and type of the room struct and set to null
 		free(roomArray[k].roomName);
 		roomArray[k].roomName = NULL;
 		free(roomArray[k].roomType);
 		roomArray[k].roomType = NULL;
+
+		//loop through all 6 possible connections (even empty ones)
 		for(h = 0; h < MAX_CONNECTIONS; h++)
 		{
+			//free connections from the room and set to null
 			free(roomArray[k].connectionNames[h]);
 			roomArray[k].connectionNames[h] = NULL;
 		}
@@ -440,8 +399,13 @@ char *GetDirName()
 				//directory's name into the newest directory's name to save it
 				if((int)directoryAttributes.st_mtime > newestDirTime)
 				{
+					//if this entry newer, set it to new newest dir time
 					newestDirTime = (int)directoryAttributes.st_mtime;
+
+					//memset the newest directory name to erase all prev data
 					memset(newestDirName, '\0', sizeof(newestDirName));
+
+					//set newest directory to current entry
 					strcpy(newestDirName, fileInDirectory->d_name);
 				}
 			}
@@ -449,6 +413,8 @@ char *GetDirName()
 		//close the open directory
 		closedir(dirToCheck);
 	}
+
+	//return the newest directory's name
 	return newestDirName;
 }
 
@@ -465,15 +431,24 @@ void CallocRooms(struct Room roomArray[])
 {
 	int i;
 	int j;
+
+	//loop through all rooms in the array of room structs
 	for(i = 0; i < NUM_ROOMS + 1; i++)
 	{
+		//create dynamic memory for room name and type using calloc (which initializes memory to 0)
 		roomArray[i].roomName = calloc(16, sizeof(char));
 		roomArray[i].roomType = calloc(16, sizeof(char));
+
+		//set connections count and struct array count (position of room struct in the array of room structs) to zero
 		roomArray[i].connectionsCount = 0;
 		roomArray[i].structArrayCt = 0;
+
+		//loop through all connections for the room
 		for(j = 0; j < MAX_CONNECTIONS; j++)
 		{
+			//create dynamic memory for connection name
 			roomArray[i].connectionNames[j] = calloc(16, sizeof(char));
+			
 			//set all room connections to empty at first, can be changed later
 			strcpy(roomArray[i].connectionNames[j], EMPTY);
 		}
@@ -493,14 +468,17 @@ int GetStartIndex(struct Room roomArray[])
 {
 	int k;
 	int startIndex;
+
+	//loop thru all rooms
 	for (k = 0; k < NUM_ROOMS; k++)
 	{
+		//if the room type of the current room is start room, the current intex (k) is the index of the start room
 		if(strcmp(roomArray[k].roomType, START_ROOM) == 0)
 		{
-			//end index found, can be assigned and returned
+			//start index found, can be assigned and returned
 			startIndex = k;
 
-			//break out of loop
+			//break out of loop since start found
 			k = NUM_ROOMS + 100;
 		}
 	}
@@ -520,46 +498,22 @@ int GetEndIndex(struct Room roomArray[])
 {
 	int k;
 	int endIndex;
+
+	//loop thru all rooms
 	for (k = 0; k < NUM_ROOMS; k++)
 	{
+		//if the room type of the current room is end room, the current intex (k) is the index of the end room
 		if(strcmp(roomArray[k].roomType, END_ROOM) == 0)
 		{
 			//end index found, can be assigned and returned
 			endIndex = k;
 
-			//break out of loop
+			//break out of loop since end found
 			k = NUM_ROOMS + 100;
 		}
 	}
 
 	return endIndex;
-}
-
-/*
-NAME
-temp print funct for testing
-SYNOPSIS
-used for testing all rooms
-DESCRIPTION
-prints all parameters for all rooms
-*/
-void Print(struct Room roomArray[])
-{
-	int i = 0;
-	int j = 0;
-	for (i = 0; i < NUM_ROOMS + 1; i++)
-	{
-		printf("%s\n", roomArray[i].roomName);
-		printf("%s\n", roomArray[i].roomType);
-		printf("%d\n", roomArray[i].connectionsCount);
-		printf("%d\n", roomArray[i].structArrayCt);
-
-		for(j = 0; j < MAX_CONNECTIONS; j++)
-		{
-			printf("%s\n", roomArray[i].connectionNames[j]);
-		}
-		printf("\n");
-	}
 }
 
 /*
@@ -572,14 +526,19 @@ finds the starting room and sets the user's current room to that start room
 */
 void InitializeUserStart(struct Room roomArray[], int userIdx, int startIdx)
 {
+	//set start room name, type, connections count, and array count (i.e. index) as user's room name,
+	//type, connections count, and array count so that the user's current room params are the start room params
 	strcpy(roomArray[userIdx].roomName, roomArray[startIdx].roomName);
 	strcpy(roomArray[userIdx].roomType, roomArray[startIdx].roomType);
 	roomArray[userIdx].connectionsCount = roomArray[startIdx].connectionsCount;
 	roomArray[userIdx].structArrayCt = userIdx;
 
 	int k;
+
+	//loop through all connections for the start room
 	for (k = 0; k < roomArray[startIdx].connectionsCount; k++)
 	{
+		//copy each connection for the start room as connections in the user's current room
 		strcpy(roomArray[userIdx].connectionNames[k], roomArray[startIdx].connectionNames[k]);
 	}
 }
@@ -596,16 +555,18 @@ int IsEndRoom(struct Room roomArray[], int endIndex)
 {
 	//use an int for bool since using raw C. 0 = false, 1 = true. initialize to false.
 	int isEndRoom = 0; 	
-	int userIndex = 7; //user is the last struct in the array of 8, i.e. position 7 
+	int userIndex = 7; //user is always the last struct in the array of 8, i.e. position 7 
 
+	//if user's current room type is end room
 	if(strcmp(roomArray[endIndex].roomType, roomArray[userIndex].roomType) == 0) //== 0 means they matched
 	{
 		//double check user's room type is END
 		if(strcmp(roomArray[userIndex].roomType, END_ROOM) == 0)
 		{
+			//set isEndRoom bool to 1 (since user's current room type is end room so end room has been reached)
 			isEndRoom = 1;
 		}
-		else
+		else //catch error where user's room type isn't the end room even tho index is end index somehow
 		{
 			printf("\nERROR, end room type matches user's room type but user's room type not END_ROOM\n");
 			exit(1);
@@ -631,13 +592,16 @@ int InputValidation(struct Room roomArray[], int userIndex, char *userStringInpu
 	int inputBool = 0;
 	int k;
 	
-	//check 
+	//loop through all connections for user's current room
 	for (k = 0; k < roomArray[userIndex].connectionsCount; k++)
 	{
+		//if the user's input exactly matches a room name the user's current room is connected to, input is valid
 		if(strcmp(roomArray[userIndex].connectionNames[k], userStringInput) == 0) //== 0 means strings matched
 		{
-			//set bool to true and break out of loop
+			//set bool to true and break out of loop since input matched a valid connection available to user
 			inputBool = 1;
+
+			//break out of loop since input has been found to be valid
 			k = roomArray[userIndex].connectionsCount + 100;
 		}
 	}
@@ -657,11 +621,15 @@ void SetNewLocation(struct Room roomArray[], int  userIndex, char *userStringInp
 {
 	//search for which location is the new one
 	int k;
-	int newLocIndex;
+	int newLocIndex; //will be index of the user's new location
+
+	//loop through all rooms
 	for(k = 0; k < NUM_ROOMS; k++)
 	{
-		if(strcmp(userStringInput, roomArray[k].roomName) == 0) //names match
+		//if the user's input matches a room's name, that index becomes the user's new index
+		if(strcmp(userStringInput, roomArray[k].roomName) == 0) //0 means names match
 		{	
+			//set current index to user's new index
 			newLocIndex = k;
 			
 			//break out of loop
@@ -669,17 +637,20 @@ void SetNewLocation(struct Room roomArray[], int  userIndex, char *userStringInp
 		}
 	}
 
-	//reset all connections (in case of new room having fewer than the current one)
+	//reset all connections (to account for case of new room having fewer connections than the current one)
 	ResetEmptyConnections(roomArray, userIndex);
 	
-	//set all attributes of current room to new room
+	//set all attributes of current room to new room, name type and connections count
 	strcpy(roomArray[userIndex].roomName, roomArray[newLocIndex].roomName);
 	strcpy(roomArray[userIndex].roomType, roomArray[newLocIndex].roomType);
 	roomArray[userIndex].connectionsCount = roomArray[newLocIndex].connectionsCount;
 
 	int m;
+
+	//loop through all connections of the new location
 	for(m = 0; m < roomArray[newLocIndex].connectionsCount; m++)
 	{
+		//set all connections from the new location as the user's current connections
 		strcpy(roomArray[userIndex].connectionNames[m], roomArray[newLocIndex].connectionNames[m]);
 	}
 	
@@ -706,7 +677,12 @@ void PlayGame(struct Room roomArray[], int startIdx, int endIdx, int userIdx)
 
 	//create time thread
 	pthread_t threads[2];
+
+	//create int to check if thread creation successful
 	int result_code;
+
+	//create thread and get return value in result_code (to check for success or not).
+	//call TimeKeep function 
 	result_code = pthread_create(&threads[0], NULL, TimeKeep, NULL);
 
 	//make sure result code == 0 (thread creation successful)
@@ -721,19 +697,29 @@ void PlayGame(struct Room roomArray[], int startIdx, int endIdx, int userIdx)
 	int isTime = 0;
 
 	//create array to hold the names of rooms visited.
-	//char *roomsVisited[maxSteps + 1];
 	char **roomsVisited;
 	roomsVisited = malloc((maxSteps + 1) * sizeof(char*));
+	
+	//check that malloc is successful (NULL means unsuccessful)
+	if (roomsVisited == NULL)
+	{
+		printf("ROOMS VISITED ARRAY ERROR, UNABLE TO ALLOCATE\n");
+		exit(1);
+	}
 
+	//create string for user's input
 	char *userInput;
 	userInput = (char *)malloc(32 * sizeof(char));
+
+	//check that malloc was successful (NULL means unsuccessful)
 	if (userInput == NULL)
 	{
 		printf("STRING ERROR, UNABLE TO ALLOCATE\n");
 		exit(1);
 	}	
 
-	//main gameplay loop
+	//main gameplay loop, loops while current num steps is less than max and while
+	//the current room is not the end room (i.e. IsEndRoom function returns false)
 	while((numSteps < maxSteps) && (IsEndRoom(roomArray, endIdx) == 0))
 	{ 
 		//get next room to go to as input from the user, and validate the input	
@@ -744,31 +730,44 @@ void PlayGame(struct Room roomArray[], int startIdx, int endIdx, int userIdx)
 				//print current room interface/prompt
 				CurRoomPrint(roomArray, userIdx);
 			}			
-			//else the user entered "time" instead of a room. reset isTime to false
+			//else the user entered "time" instead of a room. 
 			else
 			{
+				//since user entered time, print "where to" prompt instead of full game prompt (as shown
+				//in example for the assignment)
 				printf("WHERE TO? >");
+				
+				//reset isTime to false
 				isTime = 0;
 			}
 			
 			//getline information adapted from:
 			//https://c-for-dummies.com/blog/?p=1112
+
+			//create buffer and buffer size and chars. malloc buffer.
 			char *buffer;
 			size_t bufsize = 32;
 			size_t characters;
 			buffer = (char *)malloc(bufsize * sizeof(char));
+
+			//check that malloc was successful (NULL means unsuccessful)
 			if (buffer == NULL)
 			{
 				printf("BUFFER ERROR, UNABLE TO ALLOCATE\n");
 				exit(1);
 			}
+
+			//use getline to get characters of buffer size into buffer from standard input and print a newline
 			characters = getline(&buffer, &bufsize, stdin);
 			printf("\n");
 			
 			//getline adds a newline to end of string, remove newline w strtok
 			//UNLESS only a newline (i.e. "enter") was entered
+
+			//if the user didn't enter just "enter"
 			if(strcmp(buffer, "\n") != 0)
 			{
+				//remove newline from buffer w strtok
 				char *bufferNoNewLine = strtok(buffer, "\n");
 
 				//copy the buffer w newline removed into a variable that will still
@@ -778,12 +777,15 @@ void PlayGame(struct Room roomArray[], int startIdx, int endIdx, int userIdx)
 				//and causes errors with strcpy is prevented
 				if((InputValidation(roomArray, userIdx, bufferNoNewLine) == 1) || (strcmp(bufferNoNewLine, "time") == 0))
 				{
+					//set user input to the buffer w newline removed
 					strcpy(userInput, bufferNoNewLine);
 				}			
 				else
 				{
 					//in case user put in invalid input so do while loop doesn't crash
 					strcpy(userInput, "INVALID");
+
+					//print error message to the user
 					printf("HUH? I DON'T UNDERSTAND THAT ROOM. TRY AGAIN.\n\n");
 				}
 			}
@@ -792,22 +794,35 @@ void PlayGame(struct Room roomArray[], int startIdx, int endIdx, int userIdx)
 				//in case user put in only \n, set userInput to something but do
 				//nothing else (can't check InputValidation with newline removed)
 				strcpy(userInput, "INVALID");
+
+				//print error message to the user
 				printf("HUH? I DON'T UNDERSTAND THAT ROOM. TRY AGAIN.\n\n");
 			}
 
+			//free buffer memory and set to NULL
 			free(buffer);
 			buffer = NULL;			
+
+		//do while loop conditions, this do while loop to get user input will continue looping and re-prompting
+		//the user as long as the input validation is false (i.e. user put in invalid connecting room input), 
+		//and doesn't enter "time", 
 		}while((InputValidation(roomArray, userIdx, userInput) == 0) && (strcmp(userInput, "time") != 0)); //== 0 means input was not valid or that user entered "time"
 		
 		//now that have obtained valid user input, need to set current room to new room location
 		if(strcmp(userInput, "time") != 0) //if user didn't enter "time"
 		{
+			//set user's current location to the new connection location designated by the user
 			SetNewLocation(roomArray, userIdx, userInput);
+
 			//increment steps since have moved to a new room successfully
 			//(as noted in the assignment instructions, the number of STEPS taken is being
 			//counted, NOT the number of rooms visited
 			numSteps++;
+
+			//malloc memory for the rooms visited array
 			roomsVisited[numSteps - 1] = malloc(32 * sizeof(char));
+
+			//copy the visited room name to the roomsVisited array to keep track of visited rooms
 			strcpy(roomsVisited[numSteps - 1], roomArray[userIdx].roomName);
 		}
 		else //if user entered "time"
@@ -836,53 +851,69 @@ void PlayGame(struct Room roomArray[], int startIdx, int endIdx, int userIdx)
 			//read in the date/time info from the currentTime.txt file
 			//fopen use adapted from my own work created 10/25/18 as well as
 			//https://www.tutorialspoint.com/c_standard_library/c_function_fopen.htm
+
+			//create file stream
 			FILE *timeFile;
 
+			//open the time file to be read
 			//"r" means read only
 			timeFile = fopen("currentTime.txt", "r");
 			
-			if(timeFile == NULL)
+			if(timeFile == NULL) //if time file couldn't be opened
 			{
 				perror("could not open currentTime.txt file correctly");
 				exit(1);
 			}
 
+			//create string for the time string found in the time file
 			char timeFileString [1000];
 
 			//using fgets to read a file adapted from:
 			//http://www.cplusplus.com/reference/cstdio/fgets/ and my own work (10/25/18)
-			if(fgets(timeFileString, 1000, timeFile) == NULL)
+			if(fgets(timeFileString, 1000, timeFile) == NULL) //check that there's a string in the time file to be read. NULL means empty/error
 			{
-				perror("could not open currentTime.txt file correctly");
+				perror("could not open currentTime.txt file correctly to read the time string");
 				exit(1);
 			}
 			
 			//remove trailing \n that fgets adds and set to null terminator instead
 			timeFileString[strcspn(timeFileString, "\n")] = '\0';
 
-			//print time to user
-			printf(" %s\n\n", timeFileString);
+			//print time to user plus two newlines
+			printf("%s\n\n", timeFileString);
 
+			//close the time file
 			fclose(timeFile);	
 		}
 	}
 
+	//check if user's step count is greater than/equal to the max step count
 	if(numSteps >= maxSteps) //if game ended because user took too many steps looking for end room
 	{
+		//print error message to the user
 		printf("GAME OVER. Sorry, you exceeded the max number of steps (100) without finding\n");
 		printf("the end room and lost the game. Please play again to try and find the end room.\n\n");
 	}
-	else //else the game ended because user has found the end room
+	else //else the game ended because user has found the end room and won the game
 	{
+		//print winning message to the user
 		printf("YOU HAVE FOUND THE END ROOM. CONGRATULATIONS!\n");
 		printf("YOU TOOK %d STEPS. YOUR PATH TO VICTORY WAS:\n", numSteps);
+
 		int k;
+
+		//looop through the number of steps (i.e. num of rooms visited
 		for(k = 0; k < numSteps; k++)
 		{
+			//print each room visited
 			printf("%s\n", roomsVisited[k]);
+
+			//after printing, free the visited room
 			free(roomsVisited[k]);
 		}
 	}
+
+	//free rooms visited and user's input
 	free(roomsVisited);
 	free(userInput);
 }
@@ -897,22 +928,33 @@ prints the cur room info in the program's specified format
 */
 void CurRoomPrint(struct Room roomArray[], int userIndex)
 {
+	
+	//print the user's current location (i.e. room name)
 	printf("CURRENT LOCATION: %s\n", roomArray[userIndex].roomName);
+
+	//print possible connections
 	printf("POSSIBLE CONNECTIONS:");
 
 	int k;
-	//print each connection for the curr room
+	
+	//print each connection for the curr room. loop through all connections in user current room
 	for(k = 0; k < roomArray[userIndex].connectionsCount; k++)
 	{
+		//if haven't reached last connection
 		if(k != (roomArray[userIndex].connectionsCount - 1))
 		{
+			//print connection name
 			printf(" %s,", roomArray[userIndex].connectionNames[k]);
 		}
+		//if last connection
 		else
 		{
+			//print connection name plus a period and newline
 			printf(" %s.\n", roomArray[userIndex].connectionNames[k]);
 		}
 	}
+
+	//print input prompt message
 	printf("WHERE TO? >");
 }
 
@@ -947,14 +989,8 @@ int main ()
 	//initialize the user's room
 	InitializeUserStart(room, userIndex, startIndex); 
 
-	//temporary print function just to check that output of all rooms is correct
-	//Print(room);
-
 	//begin gameplay
 	PlayGame(room, startIndex, endIndex, userIndex);
-	
-	//temporary print function just to check that output of all rooms is correct
-	//Print(room);
 	
 	//free memory allocated for the rooms
 	FreeRooms(room);
